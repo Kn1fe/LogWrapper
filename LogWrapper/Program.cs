@@ -12,10 +12,12 @@ namespace LogWrapper
     {
         public static ManualResetEvent allDone = new ManualResetEvent(false);
 
-        static Dictionary<int, int> qg = new Dictionary<int, int>();
+        public static Dictionary<int, int> qg = new Dictionary<int, int>();
 
         static void Main(string[] args)
         {
+            ThreadPool.SetMaxThreads(Environment.ProcessorCount * 4, Environment.ProcessorCount * 4);
+            Console.WriteLine("by Kn1fe-Zone.Ru Team");
             StreamReader sr = new StreamReader(AppDomain.CurrentDomain.BaseDirectory + "//gold.txt");
             while (!sr.EndOfStream)
             {
@@ -23,18 +25,15 @@ namespace LogWrapper
                 qg.Add(int.Parse(s[0]), int.Parse(s[1]));
             }
             sr.Close();
-            IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Loopback, 11102);
-            Socket listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            TcpListener _server = new TcpListener(IPAddress.Loopback, 11102);
             try
             {
-                listener.Bind(localEndPoint);
-                listener.Listen(256);
-
+                _server.Start(256);
                 while (true)
                 {
                     allDone.Reset();
                     Console.WriteLine("Waiting for a connection...");
-                    listener.BeginAccept(new AsyncCallback(AcceptCallback), listener);
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(ClientThreadAsync), _server.AcceptTcpClient());
                     allDone.WaitOne();
                 }
             }
@@ -42,69 +41,71 @@ namespace LogWrapper
             {
                 Console.WriteLine(e.ToString());
             }
-            Console.WriteLine("\nPress ENTER to continue...");
             Console.Read();
         }
 
-        public static void AcceptCallback(IAsyncResult ar)
+        static async void ClientThreadAsync(Object StateInfo)
         {
             allDone.Set();
-            Socket listener = (Socket)ar.AsyncState;
-            Socket handler = listener.EndAccept(ar);
-            StateObject state = new StateObject()
+            TcpClient _client = (TcpClient)StateInfo;
+            NetworkStream stream = _client.GetStream();
+            StateObject so = new StateObject()
             {
-                workSocket = handler
+                client = _client,
+                Stream = _client.GetStream()
             };
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+            await so.ProcessAsync();
         }
+    }
 
-        public static void ReadCallback(IAsyncResult ar)
+    public class StateObject
+    {
+        public TcpClient client { get; set; }
+        public NetworkStream Stream { get; set; }
+        public const int BufferSize = 16192;
+        public byte[] buffer = new byte[BufferSize];
+
+        public async System.Threading.Tasks.Task ProcessAsync()
         {
-            StateObject state = (StateObject)ar.AsyncState;
-            Socket handler = state.workSocket;
-            int bytesRead = handler.EndReceive(ar);
-            if (bytesRead > 0)
+            while (client.Connected)
             {
-                handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
-                PacketsReader pr = new PacketsReader(state.buffer, -1);
-                uint OpCode = pr.Cuint();
-                if (OpCode == 61)
+                byte[] buffer = new byte[8096];
+                int bytesRead = await Stream.ReadAsync(buffer, 0, buffer.Length);
+                Console.WriteLine("Accept data size: " + bytesRead);
+                if (bytesRead > 5)
                 {
-                    pr.Cuint();
-                    string s = pr.ReadASCIIString();
-                    string[] parse = s.Split(':');
-                    if (parse.Length >= 5)
+                    PacketsReader pr = new PacketsReader(buffer, -1);
+                    uint OpCode = pr.Cuint();
+                    if (OpCode == 61)
                     {
-                        if (s.Contains("DeliverByAwardData"))
+                        pr.Cuint();
+                        string s = pr.ReadASCIIString();
+                        string[] parse = s.Split(':');
+                        if (parse.Length >= 5)
                         {
-                            int taskid = Convert.ToInt32(parse[3].Split('=')[1]);
-                            if (qg.ContainsKey(taskid))
+                            if (s.ToLower().Contains("deliverby"))
                             {
-                                int roleid = int.Parse(parse[2].Split('=')[1]);
-                                PacketsWriter pw = new PacketsWriter(3412);
-                                pw.PackInt(-1);
-                                pw.PackInt(roleid);
-                                pr = new PacketsReader(pw.SendData(new IPEndPoint(IPAddress.Loopback, 29400), true, false), 0);
-                                int userid = pr.ReadInt32();
-                                pw = new PacketsWriter(521);
-                                pw.PackInt(userid);
-                                pw.PackInt(qg[taskid]);
-                                pw.SendData(new IPEndPoint(IPAddress.Loopback, 29400), false, false);
-                                Console.WriteLine("Add cash: {0}, userid: {1}, roleid: {2}", qg[taskid], userid, roleid);
+                                int taskid = Convert.ToInt32(parse[3].Split('=')[1]);
+                                if (Program.qg.ContainsKey(taskid))
+                                {
+                                    int roleid = int.Parse(parse[2].Split('=')[1]);
+                                    PacketsWriter pw = new PacketsWriter(3412);
+                                    pw.PackInt(-1);
+                                    pw.PackInt(roleid);
+                                    pr = new PacketsReader(pw.SendData(new IPEndPoint(IPAddress.Loopback, 29400), true, false), 0);
+                                    int userid = pr.ReadInt32();
+                                    pw = new PacketsWriter(521);
+                                    pw.PackInt(userid);
+                                    pw.PackInt(Program.qg[taskid]);
+                                    pw.SendData(new IPEndPoint(IPAddress.Loopback, 29400), false, false);
+                                    Console.WriteLine("Add cash: {0}, userid: {1}, roleid: {2}", Program.qg[taskid], userid, roleid);
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
-
-    public class StateObject
-    {
-        public Socket workSocket = null;
-        public const int BufferSize = 16192;
-        public byte[] buffer = new byte[BufferSize];
-        public string log_name = "";
     }
 
     public class PacketsWriter
