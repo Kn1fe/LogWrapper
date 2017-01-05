@@ -1,0 +1,6 @@
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\bin\Debug\LogWrapper.exe
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\bin\Debug\LogWrapper.pdb
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\obj\Debug\LogWrapper.csprojResolveAssemblyReference.cache
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\obj\Debug\LogWrapper.exe
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\obj\Debug\LogWrapper.pdb
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\bin\Debug\LogWrapper.exe.config

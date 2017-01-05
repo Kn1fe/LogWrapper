@@ -1,0 +1,5 @@
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\bin\Release\LogWrapper.exe.config
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\bin\Release\LogWrapper.exe
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\bin\Release\LogWrapper.pdb
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\obj\Release\LogWrapper.exe
+c:\users\kn1fe\documents\visual studio 2017\Projects\LogWrapper\LogWrapper\obj\Release\LogWrapper.pdb
